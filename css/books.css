@@ -170,3 +170,33 @@ footer.site { margin-top: 40px; color: var(--muted); font-size: 13.5px; }
 .msg { max-width: 440px; text-align: left; }
 .msg img.mark { width: 44px; height: 44px; border-radius: 10px; }
 .spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--accent); animation: fb-spin .9s linear infinite; margin: 0 auto 12px; }
+/* hardcover proof review (owner only, before ordering in the app) */
+.fb-page.fb-endpaper { background: var(--paper); } /* the inside of the cover: plain paper */
+.fb-endnote { position: absolute; left: 0; right: 0; bottom: 6%; text-align: center; font-size: 12px; color: rgba(0,0,0,.38); letter-spacing: .04em; }
+.status-line { margin: -6px 0 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.proof-grid { display: grid; grid-template-columns: minmax(260px, 380px) minmax(0, 1fr); gap: 0 18px; align-items: start; }
+.proof-grid .card { margin: 16px 0 0; }
+@media (max-width: 760px) { .proof-grid { grid-template-columns: minmax(0, 1fr); } }
+.proof-figure { position: relative; margin: 6px auto 4px; max-width: 320px; aspect-ratio: 594 / 738; background: var(--desk); border-radius: 3px;
+  box-shadow: 0 6px 22px rgba(0,0,0,.22); overflow: hidden; }
+.proof-cover { display: block; width: 100%; height: 100%; object-fit: cover; }
+.proof-busy { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; background: rgba(10,22,64,.55); color: #fff; padding: 16px; }
+.proof-busy p { margin: 0; font-weight: 600; }
+.proof-busy .spinner { border-color: rgba(255,255,255,.35); border-top-color: #fff; }
+.quality { margin: 10px 0 2px; font-size: 14.5px; }
+.quality.soft { color: var(--muted); }
+.quality.blurry { color: var(--err); }
+.quality.good { color: var(--ok); }
+.ready-to-order { border-color: var(--note-line); background: var(--note); }
+.tiny { font-size: 12.5px; }
+.dlg.wide { width: min(860px, calc(100vw - 20px)); }
+.photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+.photo-tile { appearance: none; border: 2px solid transparent; background: var(--card); border-radius: 12px; padding: 4px; text-align: left; cursor: pointer;
+  display: flex; flex-direction: column; gap: 3px; color: var(--text); font: inherit; }
+.photo-tile:hover:not(:disabled) { border-color: var(--line); background: var(--note); }
+.photo-tile:disabled { cursor: default; }
+.photo-tile.current { border-color: var(--accent); }
+.photo-tile .ph { display: block; aspect-ratio: 1; background: var(--desk); border-radius: 8px; overflow: hidden; }
+.photo-tile .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-tile .quality { margin: 2px 2px 0; font-size: 13px; font-weight: 600; }
+.photo-tile .tiny { margin: 0 2px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

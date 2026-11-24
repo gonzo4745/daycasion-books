@@ -31,6 +31,9 @@
     onPage: null, // (page) => void, debounced 1.5 s (save the reading position)
     pdf: null, share: null, back: null, // async () => void; back: { label, onClick }
     brand: null, // { href, logo, label } small DayCasion mark (shared books)
+    // Hardcover proofs: pages may be { n, blank: true } (the inside of the cover, no image); label(pagesOnScreen) and
+    // tocNum(page) name pages as printed ("Front cover", "Page 1") instead of the reader's own numbering.
+    label: null, tocNum: null,
   };
   const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
   const easeOut = (t) => 1 - Math.pow(1 - t, 3);
@@ -63,6 +66,7 @@
     const pages = o.pages.slice().sort((a, b) => a.n - b.n);
     const count = pages.length;
     const textOf = new Map(pages.map((p) => [p.n, p.text || '']));
+    const blanks = new Set(pages.filter((p) => p.blank).map((p) => p.n));
     let urls = new Map(pages.filter((p) => p.url).map((p) => [p.n, p.url]));
     const aspect = clamp(+o.aspect || 0.8, 0.5, 1.5);
     const reduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
@@ -118,6 +122,7 @@
     const canNext = () => view() < viewCount() - 1;
     const canPrev = () => view() > 0;
     function pageLabel() {
+      if (o.label) return o.label(visiblePages());
       if (!S.spread || view() === 0) return `Page ${S.page} of ${count}`;
       const [l, r] = slots(view());
       return r == null ? `Page ${l} of ${count}` : `Pages ${l}–${r} of ${count}`;
@@ -142,7 +147,7 @@
     function keepAround() { // only the pages near the reader stay decoded (long books on phones)
       const span = S.spread ? 2 : 1;
       for (const [n, e] of imgs) if (n < S.page - 4 * span || n > S.page + 6 * span) { e.img.removeAttribute('src'); imgs.delete(n); }
-      for (let p = S.page - span; p <= S.page + 3 * span; p++) if (p >= 1 && p <= count) imgFor(p);
+      for (let p = S.page - span; p <= S.page + 3 * span; p++) if (p >= 1 && p <= count && !blanks.has(p)) imgFor(p);
     }
     async function renewLinks() {
       if (!o.renew) throw new Error('no renew');
@@ -186,6 +191,7 @@
       const p = el('div', { class: `fb-page ${radius}`, 'data-page': n == null ? '' : String(n) });
       p.style.width = S.pw + 'px'; p.style.height = S.ph + 'px';
       if (n == null || n < 1 || n > count) { p.classList.add('fb-blank'); return p; }
+      if (blanks.has(n)) { p.classList.add('fb-endpaper'); p.append(el('span', { class: 'fb-endnote', text: textOf.get(n) || '' })); return p; } // plain paper (the inside of the cover)
       const holder = el('div', { class: 'fb-img' });
       const e = imgFor(n);
       if (!e.loaded) holder.classList.add('fb-loading');
@@ -454,7 +460,8 @@
       const dlg = el('dialog', { class: 'fb-sheet', 'aria-labelledby': 'fb-toc-h' });
       const list = el('ol', { class: 'fb-toc' }, entries.map((c, i) => el('li', {},
         el('button', { type: 'button', class: i === current ? 'fb-here' : '', 'aria-current': i === current ? 'true' : null,
-          onclick: () => { dlg.close(); goTo(c.page, false); } }, el('span', { text: c.title }), el('span', { class: 'fb-num', text: String(c.page) })))));
+          onclick: () => { dlg.close(); goTo(c.page, false); } }, el('span', { text: c.title }),
+          el('span', { class: 'fb-num', text: o.tocNum ? o.tocNum(c.page) : String(c.page) })))));
       dlg.append(el('div', { class: 'fb-sheet-head' }, el('h2', { id: 'fb-toc-h', text: 'Contents' }), iconButton('close', 'Close', () => dlg.close())), list);
       dlg.addEventListener('close', () => { dlg.remove(); stage.focus({ preventScroll: true }); });
       dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
