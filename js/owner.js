@@ -127,8 +127,9 @@
     (quiet === true ? refreshShow : show)(page(el('h1', { class: 'page', text: 'My Keepsakes' }), intro, empty, grid));
     covers(ready);
     proofCovers(proofs);
-    if (library.books.some((b) => isHardcoverProof(b) && (b.status === 'queued' || b.status === 'generating' || coverBusy(b)))) {
-      poll(viewLibrary, 15000); // a preview or a new cover being made: the library updates by itself
+    const anyCover = library.books.some((b) => isHardcoverProof(b) && coverBusy(b)), coverMs = coverPollMs('library', anyCover, 15000);
+    if (anyCover || library.books.some((b) => isHardcoverProof(b) && (b.status === 'queued' || b.status === 'generating'))) {
+      poll(viewLibrary, coverMs); // a preview or a new cover being made: the library updates by itself
     }
   }
   // Printed books (hardcover and softcover). Only a hardcover preview can be reviewed here; everything else about
@@ -374,6 +375,13 @@
   const money = (c) => (c == null ? '' : '$' + (c / 100).toFixed(2));
   const isHardcoverProof = (b) => b.format === 'hardcover' && b.stage === 'preview';
   const coverBusy = (b) => !!(b.cover && b.cover.status !== 'ready');
+  // a new cover is usually made within seconds: check every 2 s for its first 90 s, then as before
+  const coverSeen = {};
+  const coverPollMs = (key, busy, slow) => {
+    if (!busy) { delete coverSeen[key]; return slow; }
+    if (!coverSeen[key]) coverSeen[key] = Date.now();
+    return Date.now() - coverSeen[key] < 90000 ? 2000 : slow;
+  };
   function printedStatus(b) {
     if (b.stage === 'preview') {
       return { queued: 'Free preview being made', generating: 'Free preview being made', proof_ready: b.format === 'hardcover' ? 'Proof ready to review' : 'Ready: see the price in the app',
@@ -457,7 +465,8 @@
     if (c && c.preview_path) {
       signUrls([c.preview_path], 600).then((u) => { if (u[c.preview_path]) { coverImg.referrerPolicy = 'no-referrer'; coverImg.src = u[c.preview_path]; coverImg.hidden = false; } }).catch(() => {});
     }
-    if (busy) poll(() => viewProof(orderId, true), 12000); // the new cover appears by itself
+    const coverMs = coverPollMs(orderId, busy, 12000);
+    if (busy) poll(() => viewProof(orderId, true), coverMs); // the new cover appears by itself
   }
   // once, after submitting: what happens next
   function thanks(orderId) {
