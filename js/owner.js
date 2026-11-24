@@ -440,10 +440,10 @@
       el('h2', { id: 'cover-h', text: 'Front cover' }), figure, ...coverNotes,
       c && c.can_change && reviewing && c.options > 0 ? el('div', { class: 'actions' }, el('button', { type: 'button', class: 'btn secondary', text: 'Change cover photo', disabled: busy,
         onclick: () => coverPicker(orderId) })) : null);
-    // Review My Book and Request a Change; an updated proof shows what happened to each requested change
+    // Review My Book (changes are requested on the page, in the viewer); an updated proof shows what happened to each requested change
     const changed = b.corrections ? C.results({ book: b, readHref: (n) => `#/proof/${orderId}/read/${n}` }) : null;
     const canChange = b.can_revise && !busy;
-    const intro = canChange ? C.welcome({ book: b, openBook: `#/proof/${orderId}/read`, requestChange: `#/proof/${orderId}/change` })
+    const intro = canChange ? C.welcome({ openBook: `#/proof/${orderId}/read` })
       : el('section', { class: 'card', 'aria-labelledby': 'review-h' }, el('h2', { id: 'review-h', text: b.is_revision ? 'Review your updated book' : 'Review My Book' }),
         el('p', { class: 'muted', text: 'Turn every page of your book just as it will be printed. The light PROOF mark on each page isn\'t printed.' }),
         el('div', { class: 'actions' }, el('a', { class: 'btn', href: `#/proof/${orderId}/read`, text: 'Review My Book' })));

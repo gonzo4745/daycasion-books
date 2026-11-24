@@ -354,8 +354,8 @@
     }
 
     // ------------------------------------------------------------ the book's page: Let's make your book just right
-    function welcome({ book: b, openBook, requestChange }) {
-      const n = list(b.id).length;
+    // One action: changes are requested on the page itself, in the viewer (Request a Change)
+    function welcome({ openBook }) {
       return el('section', { class: 'card welcome', 'aria-labelledby': 'welcome-h' },
         el('h2', { id: 'welcome-h', text: 'Let\'s make your book just right.' }),
         el('p', { text: 'As you review your book, you can request changes to individual stories, photos or pages. Many changes can be made automatically. If you need something more personal, our DayCasion team is here to help.' }),
@@ -370,9 +370,7 @@
             el('p', { text: 'Adjustments DayCasion makes for you: correct a story\'s text, rotate, replace, add or remove a photo, add or remove a story.' })),
           el('div', { class: 'kind assist' }, el('h3', { text: 'Personal Assistance' }),
             el('p', { text: 'For anything else, like a page layout that needs attention. Our team reviews your request and replies by email.' }))),
-        el('div', { class: 'actions' },
-          el('a', { class: 'btn', href: openBook, text: 'Review My Book' }),
-          el('a', { class: 'btn secondary', href: requestChange, text: n ? `Request a Change (${n} of ${MAX} so far)` : 'Request a Change' })));
+        el('div', { class: 'actions' }, el('a', { class: 'btn', href: openBook, text: 'Review My Book' })));
     }
 
     /** Your Requested Changes: the list, the counter, Book Details and Submit My Changes. */
@@ -422,7 +420,8 @@
         }
       }
       function confirmSubmit() {
-        const { dlg, body } = dialog('', 'Submit your changes?');
+        const n = items.length;
+        const { dlg, body } = dialog('', n === 1 ? 'Ready to Submit Your Change?' : 'Ready to Submit Your Changes?');
         const msg = el('p', { class: 'err small', role: 'alert' });
         const go = el('button', { type: 'button', class: 'btn', text: 'Submit My Changes', onclick: async () => {
           go.disabled = true; msg.textContent = '';
@@ -433,13 +432,12 @@
           store(orderId, []); dlg.close(); onSubmitted(r.data.order_id, { auto: auto.length, assist: assist.length });
         } });
         body.append(
-          el('p', { text: `You're submitting ${plural(items.length, 'change')} as your book's one revision request:` }),
-          el('ul', { class: 'sumlist' },
-            auto.length ? el('li', {}, el('strong', { text: `${plural(auto.length, 'Automatic Change')}: ` }), el('span', { text: 'we\'ll make them for you and prepare your updated proof, usually within a few minutes.' })) : null,
-            assist.length ? el('li', {}, el('strong', { text: `${plural(assist.length, 'Personal Assistance request')}: ` }),
-              el('span', { text: `our team will review ${assist.length === 1 ? 'it' : 'them'} and reply to ${email || 'your account email'}. You can approve your book once we've answered.` })) : null),
-          el('p', { class: 'small muted', text: 'Changing the cover photo stays free and separate.' }),
-          msg, el('div', { class: 'actions' }, go, el('button', { type: 'button', class: 'btn secondary', text: 'Keep reviewing', onclick: () => dlg.close() })));
+          el('p', {}, 'Your book includes ', el('strong', { text: 'ONE revision request' }), `, with up to ${MAX} individual changes.`),
+          el('p', {}, 'You\'re about to submit ', el('strong', { text: plural(n, 'change') }), '.'),
+          el('p', {}, el('strong', { text: 'Important:' }),
+            ' Once submitted, you cannot submit another revision request for this book. Please make sure you\'ve included everything you\'d like changed.'),
+          el('p', { text: 'We\'ll prepare an updated proof for your review before printing. Cover photo changes remain separate and do not use your revision.' }),
+          msg, el('div', { class: 'actions' }, go, el('button', { type: 'button', class: 'btn secondary', text: 'Keep Reviewing', onclick: () => dlg.close() })));
       }
     }
 
