@@ -463,7 +463,11 @@
         const pagesLink = (ps) => (ps && ps.length ? el('span', {}, ' See ', ...[...new Set(ps)].slice(0, 3).flatMap((n, k) => [k ? ', ' : '',
           el('a', { href: readHref(n), text: `page ${n}` })]), '.') : null);
         const autoItems = items.filter((i) => i.kind === 'auto'), assist = items.filter((i) => i.kind === 'assist');
-        const doneItems = autoItems.filter((i) => i.status === 'applied'), attention = autoItems.filter((i) => !making && i.status !== 'applied');
+        // our team's corrections (published from the staff workspace) are completed changes too; a change our team
+        // corrected further shows as such, never as needing attention
+        const held = (i) => i.status === 'applied' || i.status === 'superseded';
+        const doneItems = autoItems.filter(held), attention = autoItems.filter((i) => !making && !held(i));
+        const doneText = (i) => (i.source === 'staff' ? 'Made by our team.' : i.status === 'superseded' ? 'Our team made a further correction here.' : null);
         const what = (i) => `${i.label}${i.type === 'collages' ? ` ${i.value && i.value.on ? 'on' : 'off'}` : ''}`;
         const line = (i, mark, cls, text, extra) => el('li', { class: cls }, el('span', { class: 'mark', 'aria-hidden': 'true', text: mark }),
           el('span', { class: 'what' }, el('span', { class: 'where', text: [i.page ? `Page ${i.page}` : null, i.memory_title].filter(Boolean).join(' · ') || 'Your book' }),
@@ -482,7 +486,7 @@
           making && autoItems.length ? el('h3', { class: 'sub', text: 'Being made' }) : null,
           making && autoItems.length ? el('ul', { class: 'result-list' }, autoItems.map((i) => line(i, '…', 'wait', 'Being made now.'))) : null,
           doneItems.length && !making ? el('h3', { class: 'sub', text: 'Completed' }) : null,
-          doneItems.length && !making ? el('ul', { class: 'result-list' }, doneItems.map((i) => line(i, '✓', 'applied', null, pagesLink(i.pages)))) : null,
+          doneItems.length && !making ? el('ul', { class: 'result-list' }, doneItems.map((i) => line(i, '✓', 'applied', doneText(i), pagesLink(i.pages)))) : null,
           attention.length ? el('h3', { class: 'sub', text: 'Needs attention' }) : null,
           attention.length ? el('ul', { class: 'result-list' }, attention.map((i) => line(i, '!', 'not_applied', i.message || ''))) : null,
           notes.length ? el('div', { class: 'note' }, el('strong', { text: 'Also good to know' }), el('ul', {}, notes.map((t) => el('li', { text: t })))) : null,

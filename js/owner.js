@@ -634,11 +634,20 @@
     if (!session) return viewSignIn();
     const m = location.hash.match(/^#\/book\/([0-9a-f-]{36})$/i);
     if (m) return viewBook(m[1]);
+    // the staff workspace (DayCasion staff only: every call is refused by the server for anyone else)
+    const st = location.hash.match(/^#\/staff(?:\/([0-9a-f-]{36}))?(?:\/(read|draft)(?:\/(\d{1,4}))?)?$/i);
+    if (st && window.DcStaff) return window.DcStaff.route(staffCtx, { orderId: st[1] || null, view: st[2] || null, page: Number(st[3] || 0) });
     const pr = location.hash.match(/^#\/proof\/([0-9a-f-]{36})(?:\/(read)(?:\/(\d{1,4}))?|\/(change))?$/i);
     if (pr) return pr[2] || pr[4] ? viewProofReader(pr[1], Number(pr[3] || 0), pr[4] ? 'change' : null) : viewProof(pr[1]);
     document.title = 'My Keepsakes · DayCasion';
     return viewLibrary();
   }
+  // what the staff workspace (staff.js) uses of this page: the session's server calls, private links, the page frame and
+  // the flipbook (one reader at a time)
+  const staffCtx = { rpc, authed, signUrls, show, refreshShow, page, el, icon, API, plainErr, money, fmtDate, poll, stopPoll, closeReader,
+    get email() { return session && session.email; },
+    openReader: (opts) => { $app.replaceChildren(); document.body.classList.add('reading'); const root = el('div', { id: 'reader' });
+      document.body.append(root); reader = window.DcFlipbook.open(root, opts); return reader; } };
   window.addEventListener('hashchange', () => { route(); });
   session = loadSession();
   (async () => {

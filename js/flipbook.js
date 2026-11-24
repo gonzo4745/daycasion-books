@@ -91,11 +91,14 @@
     const tocBtn = iconButton('toc', 'Contents', () => showContents());
     const shareBtn = o.share ? el('button', { type: 'button', class: 'fb-pill', onclick: () => o.share() }, icon('share'), el('span', { text: 'Share' })) : null;
     const changeCount = el('span', { class: 'fb-count', 'aria-hidden': 'true' });
-    const changeBtn = o.change ? el('button', { type: 'button', class: 'fb-change', title: 'Request a change to the book page you\'re viewing',
-      onclick: () => o.change.onClick(visiblePages()) }, icon('edit'), el('span', { class: 'long', text: 'Request a Change' }),
-      el('span', { class: 'short', text: 'Change' }), changeCount) : null;
+    // (change.label / change.short: another wording, e.g. the staff workspace's "Correct This Page")
+    const changeLabel = (o.change && o.change.label) || 'Request a Change';
+    const changeBtn = o.change ? el('button', { type: 'button', class: 'fb-change', title: o.change.label ? `${changeLabel}: the book page you're viewing` : 'Request a change to the book page you\'re viewing',
+      onclick: () => o.change.onClick(visiblePages()) }, icon('edit'), el('span', { class: 'long', text: changeLabel }),
+      el('span', { class: 'short', text: (o.change && o.change.short) || 'Change' }), changeCount) : null;
     const setChangeCount = (n) => { if (!changeBtn) return; changeCount.textContent = n ? String(n) : ''; changeCount.hidden = !n;
-      changeBtn.setAttribute('aria-label', `Request a Change to the page you're viewing${n ? ` (${n} of 10 changes collected)` : ''}`); };
+      changeBtn.setAttribute('aria-label', o.change.label ? `${changeLabel}: the page you're viewing${n ? ` (${n} corrections in the draft)` : ''}`
+        : `Request a Change to the page you're viewing${n ? ` (${n} of 10 changes collected)` : ''}`); };
     setChangeCount(o.change ? o.change.count || 0 : 0);
     const pdfBtn = o.pdf ? iconButton('pdf', 'Download PDF', () => runPdf()) : null;
     // Full screen where the browser allows it (Android Chrome, desktop, iPad Safari; not iPhone Safari)
