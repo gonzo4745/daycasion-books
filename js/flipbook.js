@@ -23,6 +23,7 @@
     full: 'M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z',
     unfull: 'M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z',
     close: 'M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
+    flag: 'M14 6l-1-2H5v17h2v-7h5l1 2h7V6h-6zm4 8h-4l-1-2H7V6h5l1 2h5v6z',
   };
   const DEFAULTS = {
     title: '', subtitle: '', pages: [], chapters: [], aspect: 0.8, linkSeconds: 3600,
@@ -34,6 +35,8 @@
     // Hardcover proofs: pages may be { n, blank: true } (the inside of the cover, no image); label(pagesOnScreen) and
     // tocNum(page) name pages as printed ("Front cover", "Page 1") instead of the reader's own numbering.
     label: null, tocNum: null,
+    // report: { label, onClick(pagesOnScreen) } a "Report a problem" button (hardcover proofs that can still be corrected)
+    report: null,
   };
   const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
   const easeOut = (t) => 1 - Math.pow(1 - t, 3);
@@ -86,6 +89,8 @@
     const spreadBtn = iconButton('two', 'Show two pages', () => { S.spreadChoice = !S.spread; resetZoom(); layout(true); });
     const tocBtn = iconButton('toc', 'Contents', () => showContents());
     const shareBtn = o.share ? el('button', { type: 'button', class: 'fb-pill', onclick: () => o.share() }, icon('share'), el('span', { text: 'Share' })) : null;
+    const reportBtn = o.report ? el('button', { type: 'button', class: 'fb-pill fb-report', onclick: () => o.report.onClick(visiblePages()) },
+      icon('flag'), el('span', { text: o.report.label || 'Report a problem' })) : null;
     const pdfBtn = o.pdf ? iconButton('pdf', 'Download PDF', () => runPdf()) : null;
     // Full screen where the browser allows it (Android Chrome, desktop, iPad Safari; not iPhone Safari)
     const canFull = !!(document.fullscreenEnabled && root.requestFullscreen);
@@ -98,7 +103,7 @@
     const brand = o.brand ? el('a', { class: 'fb-brand', href: o.brand.href, target: '_blank', rel: 'noopener noreferrer', 'aria-label': o.brand.label || 'DayCasion' },
       el('img', { src: o.brand.logo, alt: '', width: 28, height: 28 })) : null;
     const top = el('header', { class: 'fb-bar fb-top' },
-      o.back ? iconButton('back', o.back.label || 'Back', o.back.onClick) : brand, titleEl, spreadBtn, tocBtn, fullBtn, shareBtn, pdfBtn);
+      o.back ? iconButton('back', o.back.label || 'Back', o.back.onClick) : brand, titleEl, reportBtn, spreadBtn, tocBtn, fullBtn, shareBtn, pdfBtn);
     const book = el('div', { class: 'fb-book' });
     const zoomLayer = el('div', { class: 'fb-zoom' }, book);
     const stage = el('div', { class: 'fb-stage', tabindex: '0', role: 'region', 'aria-roledescription': 'book',
@@ -512,7 +517,7 @@
     if (o.resumed && S.page > 1) showToast(`Picked up where you left off: page ${S.page}`, { label: 'Start over', onClick: () => goTo(1, false) });
 
     return {
-      get page() { return S.page; }, goTo, flip, toast: showToast,
+      get page() { return S.page; }, get visible() { return visiblePages(); }, goTo, flip, toast: showToast,
       destroy() {
         S.destroyed = true; cancelAnimationFrame(S.anim); clearTimeout(saveTimer); clearTimeout(chromeTimer); clearTimeout(tapTimer);
         if (o.onPage && saveTimer) o.onPage(S.page);
