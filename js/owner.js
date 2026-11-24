@@ -403,7 +403,8 @@
     if (!isHardcoverProof(b)) return proofProblem('Only hardcover proofs can be reviewed here', 'See this book in the DayCasion app.');
     const title = `${b.profile_name || ''} · ${familyTitle(b.family)}`;
     document.title = `${title} hardcover proof · DayCasion`;
-    const head = [el('h1', { class: 'page', text: `${title} · Hardcover` }),
+    const head = [el('a', { class: 'backlink', href: '#/' }, icon('back'), el('span', { text: 'My Keepsakes' })),
+      el('h1', { class: 'page', text: `${title} · Hardcover` }),
       el('p', { class: 'lede', text: [periodLabel(b.period_type, b.period_start, b.period_end), b.page_count ? `${b.page_count} pages` : '',
         b.price_cents ? money(b.price_cents) : ''].filter(Boolean).join(' · ') })];
     if (b.status === 'queued' || b.status === 'generating') {

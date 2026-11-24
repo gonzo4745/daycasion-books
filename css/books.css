@@ -173,6 +173,9 @@ footer.site { margin-top: 40px; color: var(--muted); font-size: 13.5px; }
 /* hardcover proof review (owner only, before ordering in the app) */
 .fb-page.fb-endpaper { background: var(--paper); } /* the inside of the cover: plain paper */
 .fb-endnote { position: absolute; left: 0; right: 0; bottom: 6%; text-align: center; font-size: 12px; color: rgba(0,0,0,.38); letter-spacing: .04em; }
+.backlink { display: inline-flex; align-items: center; gap: 4px; margin: 14px 0 -6px; padding: 8px 10px 8px 4px; min-height: 44px; font-weight: 600; text-decoration: none; color: var(--link); }
+.backlink svg { width: 22px; height: 22px; fill: currentColor; }
+.backlink:hover span { text-decoration: underline; text-underline-offset: 3px; }
 .status-line { margin: -6px 0 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .proof-grid { display: grid; grid-template-columns: minmax(260px, 380px) minmax(0, 1fr); gap: 0 18px; align-items: start; }
 .proof-grid .card { margin: 16px 0 0; }
