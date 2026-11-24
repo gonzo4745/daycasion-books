@@ -11,6 +11,7 @@
   const KEEP = 'dc-books-session'; // localStorage when "Keep me signed in" (default), else sessionStorage
   const $app = document.getElementById('app');
   let session = null, reader = null, library = null;
+  let justSubmitted = null; // { id, auto, assist }: the updated proof shows "Thank you" once
 
   // ------------------------------------------------------------------ session
   function loadSession() {
@@ -367,9 +368,9 @@
   // Owner only, hardcover previews only (Life Story and Year in Review). Everything goes through the app's own server
   // functions: dc_keepsake_my_keepsakes (status, price, cover), dc_keepsake_proof (the watermarked proof),
   // dc_keepsake_cover_options / dc_keepsake_set_cover (Change Cover Photo, made by the book worker as in the app) and
-  // the one revision as a list of corrections (corrections.js: Report a problem on a page, dc_keepsake_request_corrections,
-  // dc_keepsake_revision_status). Approval and payment stay in the DayCasion app. Proofs are never shareable (share links
-  // work only for finished books).
+  // the one revision as a list of requested changes (corrections.js: Request a Change on a page, Your Requested
+  // Changes, dc_keepsake_request_corrections, dc_keepsake_revision_status). Approval and payment stay in the DayCasion
+  // app. Proofs are never shareable (share links work only for finished books).
   const money = (c) => (c == null ? '' : '$' + (c / 100).toFixed(2));
   const isHardcoverProof = (b) => b.format === 'hardcover' && b.stage === 'preview';
   const coverBusy = (b) => !!(b.cover && b.cover.status !== 'ready');
@@ -410,9 +411,10 @@
       el('p', { class: 'lede', text: [periodLabel(b.period_type, b.period_start, b.period_end), b.page_count ? `${b.page_count} pages` : '',
         b.price_cents ? money(b.price_cents) : ''].filter(Boolean).join(' · ') })];
     if (b.status === 'queued' || b.status === 'generating') {
-      show(page(...head, el('div', { class: 'card' }, el('h2', { text: b.is_revision ? 'Your new proof is being made' : 'Your free preview is being made' }),
+      show(page(...head, el('div', { class: 'card' }, el('h2', { text: b.is_revision ? 'We\'re preparing your updated proof' : 'Your free preview is being made' }),
         el('p', { class: 'muted', text: 'It usually takes a few minutes. This page updates by itself, or come back later.' })),
         b.corrections ? C.results({ book: b, readHref: (n) => `#/proof/${orderId}/read/${n}` }) : null));
+      thanks(orderId);
       return poll(() => viewProof(orderId, true), 15000);
     }
     if (b.status === 'failed') return proofProblem('This preview didn\'t finish', 'Open the DayCasion app to try again.');
@@ -438,22 +440,30 @@
       el('h2', { id: 'cover-h', text: 'Front cover' }), figure, ...coverNotes,
       c && c.can_change && reviewing && c.options > 0 ? el('div', { class: 'actions' }, el('button', { type: 'button', class: 'btn secondary', text: 'Change cover photo', disabled: busy,
         onclick: () => coverPicker(orderId) })) : null);
-    // the proof, the one revision, and what to do next
-    const read = el('section', { class: 'card' }, el('h2', { text: 'Review every page' }),
-      el('p', { class: 'muted', text: 'Turn every page of your book exactly as it will be printed, starting with the front cover. Pages show a PROOF watermark that isn\'t printed.' }),
-      el('div', { class: 'actions' }, el('a', { class: 'btn', href: `#/proof/${orderId}/read`, text: 'Open the proof' })));
-    // a revised proof: what happened to each correction; a proof that can be corrected: the list to send
+    // Review My Book and Request a Change; an updated proof shows what happened to each requested change
     const changed = b.corrections ? C.results({ book: b, readHref: (n) => `#/proof/${orderId}/read/${n}` }) : null;
-    const revise = b.can_revise && !busy ? C.card({ book: b, email: session.email, openProof: `#/proof/${orderId}/read`,
-      onChange: () => viewProof(orderId, true), onSent: (id) => { location.hash = `#/proof/${id}`; } }) : null;
+    const canChange = b.can_revise && !busy;
+    const intro = canChange ? C.welcome({ book: b, openBook: `#/proof/${orderId}/read`, requestChange: `#/proof/${orderId}/change` })
+      : el('section', { class: 'card', 'aria-labelledby': 'review-h' }, el('h2', { id: 'review-h', text: b.is_revision ? 'Review your updated book' : 'Review My Book' }),
+        el('p', { class: 'muted', text: 'Turn every page of your book just as it will be printed. The light PROOF mark on each page isn\'t printed.' }),
+        el('div', { class: 'actions' }, el('a', { class: 'btn', href: `#/proof/${orderId}/read`, text: 'Review My Book' })));
+    const requested = canChange ? C.summary({ book: b, email: session.email, onChange: () => viewProof(orderId, true),
+      onSubmitted: (id, counts) => { justSubmitted = { id, ...counts }; location.hash = `#/proof/${id}`; } }) : null;
     const order = el('section', { class: 'card ready-to-order', 'aria-labelledby': 'order-h' }, el('h2', { id: 'order-h', text: 'Ready to order?' }), ...orderText(b, busy));
     (quiet ? refreshShow : show)(page(...head, el('p', { class: 'status-line' }, el('span', { class: 'chip', text: printedStatus(b) }),
       b.quote_expires_at && reviewing ? el('span', { class: 'muted small', text: ` Price guaranteed until ${fmtDate(b.quote_expires_at)}.` }) : null),
-    el('div', { class: 'proof-grid' }, coverCard, el('div', {}, changed, read, revise, order))));
+    el('div', { class: 'proof-grid' }, coverCard, el('div', {}, changed, intro, requested, order))));
+    thanks(orderId);
     if (c && c.preview_path) {
       signUrls([c.preview_path], 600).then((u) => { if (u[c.preview_path]) { coverImg.referrerPolicy = 'no-referrer'; coverImg.src = u[c.preview_path]; coverImg.hidden = false; } }).catch(() => {});
     }
     if (busy) poll(() => viewProof(orderId, true), 12000); // the new cover appears by itself
+  }
+  // once, after submitting: what happens next
+  function thanks(orderId) {
+    if (!justSubmitted || justSubmitted.id !== orderId) return;
+    const t = justSubmitted; justSubmitted = null;
+    C.submitted({ auto: t.auto, assist: t.assist, email: session && session.email });
   }
   function orderText(b, busy) {
     if (b.status === 'approved') return [el('p', { text: 'You\'ve approved this proof. Finish your order in the DayCasion app: open My Keepsakes and choose this hardcover.' }), appButton()];
@@ -461,7 +471,7 @@
     const c = b.cover || {};
     return [
       el('p', { text: 'When you\'re happy with your proof, approve it and pay in the DayCasion app: open My Keepsakes, choose this hardcover, then tap Approve for printing.' }),
-      el('p', { class: 'muted small', text: `${b.page_count} pages · ${money(b.price_cents)} plus shipping (US only), paid securely in the app. Your cover and any revision you choose here are saved to your account, so the app shows the same proof.` }),
+      el('p', { class: 'muted small', text: `${b.page_count} pages · ${money(b.price_cents)} plus shipping (US only), paid securely in the app. Your cover and your requested changes are saved to your account, so the app shows the same proof.` }),
       busy ? el('p', { class: 'small err', text: 'Wait for your new cover before you approve.' }) : null,
       b.corrections && b.corrections.personal_open > 0 ? el('p', { class: 'small err', text: `Our team is still looking into ${b.corrections.personal_open === 1 ? 'your request' : `${b.corrections.personal_open} requests`}. You can approve once we've answered: we'll email you.` }) : null,
       c.ack_needed ? el('p', { class: 'small err', text: 'Confirm the cover photo note before you approve, or choose another photo.' }) : null,
@@ -473,7 +483,7 @@
       : el('p', { class: 'note', text: 'On your phone or tablet, open the DayCasion app and go to My Keepsakes.' });
   }
 
-  async function viewProofReader(orderId, startAt) {
+  async function viewProofReader(orderId, startAt, intent) {
     show(el('div', { class: 'center' }, el('div', { class: 'msg' }, el('div', { class: 'spinner', role: 'status', 'aria-label': 'Opening your proof' }))));
     let info, manifest, b;
     try { b = await findBook(orderId); } catch (e) {
@@ -521,20 +531,35 @@
     document.title = `${title || 'Hardcover proof'} (proof) · DayCasion`;
     $app.replaceChildren(); document.body.classList.add('reading');
     const root = el('div', { id: 'reader' }); document.body.append(root);
-    // Report a problem (a proof that can still be corrected): the printed pages on screen; added to the review page's list
-    const report = b.can_revise ? { label: 'Report a problem', onClick: (onScreen) => C.report({ orderId, manifest,
+    // A short welcome the first time (or when the member came to request a change): Request a Change is for the page
+    // on screen. Shown once per browser; never over the pages for long.
+    const TIP = 'dc-proof-tip-seen';
+    let tip = null, seen = false;
+    try { seen = localStorage.getItem(TIP) === '1'; } catch (e) { /* storage off */ }
+    const dismissTip = () => { if (!tip) return; tip.remove(); tip = null; try { localStorage.setItem(TIP, '1'); } catch (e) { /* this tab only */ } };
+    // Request a Change (a proof that can still be changed): for the printed page(s) on screen; saved to Your Requested Changes
+    const change = b.can_revise ? { count: C.list(orderId).length, onClick: (onScreen) => { dismissTip(); C.changePage({ orderId, manifest,
       pages: onScreen.filter((n) => n >= 3).map((n) => n - 2), pageUrl: (n) => urls[n + 2],
       onCover: () => { location.hash = `#/proof/${orderId}`; },
-      onAdded: (count) => reader && reader.toast(`Added to your corrections (${count} of 10). Send them from the review page.`,
-        { label: 'Review', onClick: () => { location.hash = `#/proof/${orderId}`; } }) }) } : null;
-    const start = startAt > 0 && startAt <= total ? startAt + 2 : 1;
+      onAdded: (count) => { if (!reader) return; reader.setChangeCount(count);
+        reader.toast(`Added to Your Requested Changes (${count} of 10). Submit them together from your book's page.`,
+          { label: 'See my changes', onClick: () => { location.hash = `#/proof/${orderId}`; } }); } }); } } : null;
+    const start = intent === 'change' ? 3 : startAt > 0 && startAt <= total ? startAt + 2 : 1;
     reader = window.DcFlipbook.open(root, {
       title: `Proof · ${title}`, subtitle: `Hardcover · ${total} pages · ${money(b.price_cents)} · approve and pay in the DayCasion app`,
       aspect: manifest.page_aspect || 0.8, chapters: (manifest.chapters || []).map((ch) => ({ ...ch, page: ch.page + 2 })), linkSeconds: 3600,
-      pages: all.map((p) => ({ n: p.n, text: p.text, blank: !p.path, url: urls[p.n] })), startPage: start, resumed: false, report,
+      pages: all.map((p) => ({ n: p.n, text: p.text, blank: !p.path, url: urls[p.n] })), startPage: start, resumed: false, change,
       renew: sign, label, tocNum: (n) => (n <= 2 ? '' : String(n - 2)),
-      back: { label: 'Back to the proof review', onClick: () => { location.hash = `#/proof/${orderId}`; } },
+      back: { label: 'Back to my book\'s page', onClick: () => { location.hash = `#/proof/${orderId}`; } },
     });
+    if (change && (!seen || intent === 'change')) {
+      tip = el('div', { class: 'fb-tip', role: 'note' },
+        el('p', { text: intent === 'change'
+          ? 'Go to the page you\'d like to change, then select Request a Change. It applies to the page you\'re viewing.'
+          : 'Enjoy looking through your book! If you\'d like to change a story, photo or page, select Request a Change while viewing that page. You can collect up to 10 changes and submit them together before ordering.' }),
+        el('button', { type: 'button', class: 'btn small', text: 'Got it', onclick: dismissTip }));
+      root.append(tip);
+    }
   }
 
   async function coverPicker(orderId) {
@@ -609,8 +634,8 @@
     if (!session) return viewSignIn();
     const m = location.hash.match(/^#\/book\/([0-9a-f-]{36})$/i);
     if (m) return viewBook(m[1]);
-    const pr = location.hash.match(/^#\/proof\/([0-9a-f-]{36})(\/read(?:\/(\d{1,4}))?)?$/i);
-    if (pr) return pr[2] ? viewProofReader(pr[1], Number(pr[3] || 0)) : viewProof(pr[1]);
+    const pr = location.hash.match(/^#\/proof\/([0-9a-f-]{36})(?:\/(read)(?:\/(\d{1,4}))?|\/(change))?$/i);
+    if (pr) return pr[2] || pr[4] ? viewProofReader(pr[1], Number(pr[3] || 0), pr[4] ? 'change' : null) : viewProof(pr[1]);
     document.title = 'My Keepsakes · DayCasion';
     return viewLibrary();
   }
