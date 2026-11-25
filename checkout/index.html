@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="theme-color" content="#faf7f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a1640" media="(prefers-color-scheme: dark)">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'">
+<title>DayCasion</title>
+<link rel="icon" type="image/png" href="../images/favicon.png">
+<link rel="stylesheet" href="../css/books.css?v=c3962a2d90">
+</head>
+<body>
+<!-- Stripe Checkout returns here after a printed book's payment (?r=paid) or when the member goes back (?r=cancelled).
+     Nothing about the order is read or shown: the DayCasion app shows the order's status itself. -->
+<div class="center"><div class="card narrow msg" id="ret">
+  <img class="mark" src="../images/mark.png" alt="" width="44" height="44">
+  <h1 class="page" id="ret-h">Return to DayCasion</h1>
+  <p id="ret-p">You can close this page and return to the DayCasion app.</p>
+  <p class="muted small" id="ret-next"></p>
+  <p class="muted small" id="ret-close">To go back to the app, tap <strong>Done</strong> or <strong>✕</strong> at the top of this screen.</p>
+  <div class="actions" id="ret-app" hidden><a class="btn" href="daycasion://daycasion.com/myKeepsakes">Open My Keepsakes</a></div>
+</div></div>
+<script src="../js/checkout.js?v=c3962a2d90"></script>
+</body>
+</html>

@@ -124,13 +124,50 @@
       proofs.length ? 'Review your hardcover proofs here on a computer or tablet before you order them in the DayCasion app.' : ''].filter(Boolean).join(' ') });
     const empty = !library.books.length ? el('div', { class: 'card' }, el('h2', { text: library.visible ? 'No books yet' : 'Keepsakes aren\'t available for this account yet' }),
       el('p', { class: 'muted', text: library.visible ? 'Order a Year in Review or Life Story Biography eBook in the DayCasion app. It appears here when it\'s ready.' : 'Your finished DayCasion books will appear here.' })) : null;
-    (quiet === true ? refreshShow : show)(page(el('h1', { class: 'page', text: 'My Keepsakes' }), intro, empty, grid));
+    const testTools = el('div');
+    (quiet === true ? refreshShow : show)(page(el('h1', { class: 'page', text: 'My Keepsakes' }), intro, empty, grid, testTools));
     covers(ready);
     proofCovers(proofs);
+    uatTools(testTools);
     const anyCover = library.books.some((b) => isHardcoverProof(b) && coverBusy(b)), coverMs = coverPollMs('library', anyCover, 15000);
     if (anyCover || library.books.some((b) => isHardcoverProof(b) && (b.status === 'queued' || b.status === 'generating'))) {
       poll(viewLibrary, coverMs); // a preview or a new cover being made: the library updates by itself
     }
+  }
+  // The demo test account only (the server decides: dc_keepsake_uat_status, while Stripe is in test mode and RPI in
+  // sandbox): its printed-book previews are always made fresh and not limited, and its test books can be hidden from My
+  // Keepsakes (in the app too) and shown again. Nothing is deleted. Any other account, or a server without UAT mode: nothing.
+  async function uatTools(box) {
+    let r; try { r = await rpc('dc_keepsake_uat_status'); } catch (e) { return; }
+    if (!r || !r.ok || !r.data || r.data.active !== true) return;
+    const st = r.data;
+    const act = async (fn, btn) => {
+      btn.disabled = true;
+      const x = await rpc(fn, fn === 'dc_keepsake_uat_archive' ? { p_keep: [] } : {}).catch(() => null);
+      if (!x || !x.ok) { btn.disabled = false; return alert(plainErr(x, 'Please try again.')); }
+      viewLibrary(true);
+    };
+    const hide = el('button', { type: 'button', class: 'btn small secondary', text: 'Hide my test books', disabled: !st.shown,
+      onclick: async (e) => { const b = e.currentTarget; if (await uatConfirm(st.shown)) act('dc_keepsake_uat_archive', b); } });
+    const unhide = st.hidden ? el('button', { type: 'button', class: 'btn small secondary', text: `Show ${st.hidden} hidden test book${st.hidden === 1 ? '' : 's'}`,
+      onclick: (e) => act('dc_keepsake_uat_restore', e.currentTarget) }) : null;
+    box.replaceChildren(el('section', { class: 'card', 'aria-labelledby': 'uat-h' }, el('h2', { id: 'uat-h', text: 'Test account' }),
+      el('p', { class: 'muted small', text: 'This demo account is in test mode: every free preview is made fresh and the preview limit doesn\'t apply. '
+        + 'Payments use Stripe test mode and printing uses the RPI sandbox, so nothing is charged or printed.' }),
+      el('p', { class: 'muted small', text: 'Hide your earlier test books to start a clean test. Nothing is deleted, eBooks stay, and you can show them again.' }),
+      el('div', { class: 'actions' }, hide, unhide)));
+  }
+  function uatConfirm(n) {
+    return new Promise((resolve) => {
+      const dlg = el('dialog', { class: 'dlg', 'aria-labelledby': 'uat-c-h' });
+      let answer = false;
+      dlg.append(el('div', { class: 'dhead' }, el('h2', { id: 'uat-c-h', text: 'Hide your test books?' })),
+        el('div', { class: 'inner' }, el('p', { text: `Your ${n} printed-book preview${n === 1 ? '' : 's'} and test order${n === 1 ? '' : 's'} will be hidden from My Keepsakes here and in the app. Nothing is deleted, books being made stay, and you can show them again.` }),
+          el('div', { class: 'actions' }, el('button', { type: 'button', class: 'btn', text: 'Hide test books', onclick: () => { answer = true; dlg.close(); } }),
+            el('button', { type: 'button', class: 'btn secondary', text: 'Cancel', onclick: () => dlg.close() }))));
+      dlg.addEventListener('close', () => { dlg.remove(); resolve(answer); });
+      document.body.append(dlg); dlg.showModal();
+    });
   }
   // Printed books (hardcover and softcover). Only a hardcover preview can be reviewed here; everything else about
   // printed books (softcover previews, approval, payment, printing) stays in the DayCasion app.
