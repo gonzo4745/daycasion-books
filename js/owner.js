@@ -517,7 +517,7 @@
     const c = b.cover || {};
     return [
       el('p', { text: 'When you\'re happy with your proof, approve it and pay in the DayCasion app: open My Keepsakes, choose this hardcover, then tap Approve for printing.' }),
-      el('p', { class: 'muted small', text: `${b.page_count} pages · ${money(b.price_cents)} plus shipping (US only), paid securely in the app. Your cover and your requested changes are saved to your account, so the app shows the same proof.` }),
+      el('p', { class: 'muted small', text: `${b.page_count} pages · ${money(b.price_cents)} plus shipping (contiguous US and Washington, DC only), paid securely in the app. Your cover and your requested changes are saved to your account, so the app shows the same proof.` }),
       busy ? el('p', { class: 'small err', text: 'Wait for your new cover before you approve.' }) : null,
       b.corrections && b.corrections.personal_open > 0 ? el('p', { class: 'small err', text: `Our team is still looking into ${b.corrections.personal_open === 1 ? 'your request' : `${b.corrections.personal_open} requests`}. You can approve once we've answered: we'll email you.` }) : null,
       c.ack_needed ? el('p', { class: 'small err', text: 'Confirm the cover photo note before you approve, or choose another photo.' }) : null,
