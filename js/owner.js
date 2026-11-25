@@ -608,7 +608,7 @@
     });
     const auto = options.some((o) => o.auto);
     body.replaceChildren(...[
-      el('p', { class: 'muted', text: 'Choose a photo from this book for the hardcover. Only the cover is made again: your pages, price and revision stay the same. Your new cover appears here in a few minutes.' }),
+      el('p', { class: 'muted', text: 'Choose a photo from this book for the hardcover. Only the cover is made again: your pages, price and revision stay the same. Your new cover is being prepared. This page will update automatically when it\'s ready.' }),
       msg, cur.auto === false ? el('div', { class: 'actions', style: 'margin:0 0 12px' }, el('button', { type: 'button', class: 'btn small secondary',
         text: auto ? 'Let DayCasion choose' : 'Use a cover without a photo', onclick: () => choose(null) })) : null,
       options.length ? el('div', { class: 'photo-grid' }, tiles) : el('p', { class: 'muted', text: 'None of this book\'s photos is large enough for the cover.' })].filter(Boolean));
